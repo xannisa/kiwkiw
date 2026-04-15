@@ -160,8 +160,34 @@ set the permission for `authorized_key` to `600` will only the user and root can
 
 Log in into the vm with `sepractest` user and key.
 
+## 4. Install Moodle in VM01
 
+*Dont forget to use root user by doing `sudo su`*
 
+In this VM will install moodle in `/app/se-prac-test/sepractest/moodle` folder. first read the documentation if unfamiliar with moodle. *https://docs.moodle.org/501/en/Installing_Moodle*. Based on the docs, it needs server (nginx), backend (php7x), database (mariadb 10x) and cache-server (redis).
+
+So before it install the others service by using `yum`. Before that, the php74 is used, to install this, it use remi repo. and mariadb 10x is installed by mariadb repo. 
+
+```bash
+[mariadb]
+name = MariaDB
+baseurl = https://mirror.mariadb.org/yum/10.11/centos/7/x86_64/
+gpgkey=https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
+gpgcheck=1
+enabled=1
+```
+to install remi repo
+
+```bash
+yum install -y https://rpms.remirepo.net/enterprise/remi-release-7.rpm
+```
+
+then install all packages , enable those service and start :
+```bash
+yum install -y mariadb-server redis php php-fpm
+systemctl enable nginx mariadb php-fpm redis
+systemctl start nginx mariadb php-fpm redis
+```
 
 
 
