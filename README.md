@@ -26,6 +26,11 @@ sudo yum repolist # if no error then go ahead, if error check again
 sudo yum update -y
 ```
 
+Set the proper date
+```bash
+sudo timedatectl set-timezone Asia/Jakarta
+```
+
 ### SElinux enable
 
 Dont forget to use root user by doing `sudo su`
@@ -258,7 +263,8 @@ $CFG->dboptions = array (
   'dbcollation' => 'utf8mb4_unicode_ci', # ensure the php to db use this unicode
 );
 
-$CFG->wwwroot   = 'http://system-qyuwqqtklaufxa.gdplabs.net';
+$CFG->wwwroot   = 'https://system-qyuwqqtklaufxa.gdplabs.net'; # to redirect to https
+$CFG->sslproxy = 1; # add to tell moodle use secure connection
 $CFG->dataroot  = '/app/se-prac-test/sepractest/moodledata';
 $CFG->admin     = 'admin';
 
@@ -272,4 +278,59 @@ require_once(__DIR__ . '/lib/setup.php');
 ```
 restart php-fpm service.
 
+Then, set https using cert from lets encrypt. Install the package to generate cert.
+```bash
+sudo yum install certbot python2-certbot-nginx -y
+```
 
+Then create cert for nginx.
+``` bash
+sudo certbot --nginx -d <domain>
+```
+
+Follow the questions until you get `Congratulations! You have successfully enabled https://<domain>`
+
+Then error from the bwoser because I force to https xD.
+
+Ok, then fill the installation account.
+
+
+The cache need to configure from website. And the website become no color.
+
+sudo yum install php-opcache
+
+server {
+    server_name system-qyuwqqtklaufxa.gdplabs.net;
+
+    root /app/se-prac-test/sepractest/moodle;
+    index index.php;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        include fastcgi_params;
+        fastcgi_pass 127.0.0.1:9000;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    }
+
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/system-qyuwqqtklaufxa.gdplabs.net/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/system-qyuwqqtklaufxa.:qgdplabs.net/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+}
+server {
+    if ($host = system-qyuwqqtklaufxa.gdplabs.net) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    listen 80;
+    server_name system-qyuwqqtklaufxa.gdplabs.net;
+    return 404; # managed by Certbot
+
+
+}
