@@ -189,6 +189,87 @@ systemctl enable nginx mariadb php-fpm redis
 systemctl start nginx mariadb php-fpm redis
 ```
 
+*in the installation later, package checks will perform. we can back it later, ensure the service is running first*
 
+then, locate to `/app/se-prac-test/sepractest/` folder then checkout moodle installation file.
+```bash
+git clone https://github.com/moodle/moodle.git
+#use 39 version
+git checkout -t origin/MOODLE_39_STABLE
+```
+
+Install git first if no git package.
+
+then, create nginx conf in `/etc/nginx/conf.d/moodle.conf` as web server to pass to php backend file. chnage <domain> to proper domain. Restart the nginx.
+
+then, create php.ini ini `/etc/php.ini` to set some variable values. restart php.
+
+then, can access via website through the domain name in the browser. Follow it, the screenshoot of the step is provided in pdf file.
+
+Will go back to the vm and install the packages
+```bash
+sudo yum install php-common php-cli php-fpm php-mysqlnd php-zip php-gd php-intl php-mbstring php-xml php-xmlrpc php-soap php-opcache php-json php-curl php-iconv
+```
+restart php service.
+
+Create the database tables. after installation, `sudo mariadb-secure-installation` to configure the mariadb. And execute this command to create the db and set the unicode required by moodle.
+
+```bash
+mariadb -u root -p # type password then
+CREATE DATABASE moodle DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+GRANT ALL PRIVILEGES ON moodle.* TO 'moodleuser'@'localhost' IDENTIFIED BY 'your_password';
+FLUSH PRIVILEGES;
+EXIT;
+```
+
+your_password = moodle12!
+
+to solve unicode, add mariadb conf to `/etc/my.cnf` and restart mariadb. And execute this command :
+```bash
+cd /app/se-prac-test/sepractest/moodle/admin/cli
+php admin/cli/mysql_collation.php --collation=utf8mb4_unicode_ci
+```
+
+update the tables on db :
+```bash
+mysqlcheck -u root -p --auto-repair --optimize --all-databases
+```
+
+then, update `config.php` in `/app/se-prac-test/sepractest/moodle/config.php` to this
+``` bash
+<?php  // Moodle configuration file
+
+unset($CFG);
+global $CFG;
+$CFG = new stdClass();
+
+$CFG->dbtype    = 'mariadb';
+$CFG->dblibrary = 'native';
+$CFG->dbhost    = 'localhost';
+$CFG->dbname    = 'moodle';
+$CFG->dbuser    = 'moodleuser';
+$CFG->dbpass    = 'moodle12!';
+$CFG->prefix    = 'mdl_';
+$CFG->dboptions = array (
+  'dbpersist' => 0,
+  'dbport' => 3306,
+  'dbsocket' => '',
+//  'dbcollation' => 'utf8_general_ci', # remove this, I uncomment it
+  'dbcollation' => 'utf8mb4_unicode_ci', # ensure the php to db use this unicode
+);
+
+$CFG->wwwroot   = 'http://system-qyuwqqtklaufxa.gdplabs.net';
+$CFG->dataroot  = '/app/se-prac-test/sepractest/moodledata';
+$CFG->admin     = 'admin';
+
+$CFG->directorypermissions = 0777;
+
+require_once(__DIR__ . '/lib/setup.php');
+
+// There is no php closing tag in this file,
+// it is intentional because it prevents trailing whitespace problems!
+
+```
+restart php-fpm service.
 
 
