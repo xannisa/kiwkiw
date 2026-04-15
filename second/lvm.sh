@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 
 createlogicalvolume (){
     # Create a virtual filesystem

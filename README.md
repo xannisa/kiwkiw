@@ -125,6 +125,43 @@ xvdb                  202:16   0  20G  0 disk
                       253:0    0  20G  0 lvm  /app/se-prac-test
 ```
 
+## 3. Create User sepractest
+
+*Dont forget to use root user by doing `sudo su`*
+
+To create a user with shell privilege.
+
+```bash
+    id sepractest &>/dev/null || useradd -m -s /bin/bash sepractest
+```
+
+This user is used for *still dont know*. Because the privatekey is provided, We need to create publickey for this machine to recognize our privatekey. We need a folder to store it. Commonly, it store on `/home/sepractest/.ssh` folder with name `authorized_key`. To protect from others users, the folder should set to `700` permissions so only the owner can read, write, or go insite the folder and set the folder owner owned by the user. This allow root and the appropriate user to see inside. 
+
+
+```bash
+    mkdir -p /home/sepractest/.ssh
+    chmod 700 /home/sepractest/.ssh
+    chown sepractest:sepractest /home/sepractest/.ssh
+```
+
+then, create the publickey. *dont forget to copy the privatekey file inside to the server, this temporary, and set 700 to it*
+
+```bash
+ssh-keygen -y -f <privatekeyfile> > /home/sepractest/.ssh/authorized_key
+```
+
+set the permission for `authorized_key` to `600` will only the user and root can change and see.
+```bash
+    chmod 600 /home/sepractest/.ssh/authorized_key
+    chown sepractest:sepractest /home/sepractest/.ssh/authorized_key
+```
+
+*Delete the private key on the VM*
+
+Log in into the vm with `sepractest` user and key.
+
+
+
 
 
 
