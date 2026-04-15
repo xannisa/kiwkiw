@@ -222,7 +222,7 @@ Create the database tables. after installation, `sudo mariadb-secure-installatio
 ```bash
 mariadb -u root -p # type password then
 CREATE DATABASE moodle DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-GRANT ALL PRIVILEGES ON moodle.* TO 'moodleuser'@'localhost' IDENTIFIED BY 'your_password';
+GRANT ALL PRIVILEGES ON moodle.* TO 'moodleuser'@'localhost' IDENTIFIED BY 'moodle12!';
 FLUSH PRIVILEGES;
 EXIT;
 ```
