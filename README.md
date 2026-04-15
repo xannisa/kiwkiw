@@ -46,7 +46,7 @@ Or if want to one time enable it use
 setenforce 1
 ```
 
-## 1. Create logical volume for /dev/xvdb
+## 2. Create logical volume for /dev/xvdb
 
 *Dont forget to use root user by doing `sudo su`*
 
@@ -57,5 +57,20 @@ To check the available volume by using :
 lsblk
 ```
 
+If it produce something like this:
+```bash
+NAME                       MAJ:MIN RM SIZE RO TYPE MOUNTPOINT
+xvda                       202:0    0  20G  0 disk 
+└─xvda1                    202:1    0  20G  0 part /
+xvdb                       202:16   0  20G  0 disk 
+```
+means it use disk pratitioning and unmounting for disk `xvdb`.
 
+*This needs lvm2 package to install*
+Use this command to install :
+``` bash
+yum install lvm2 -y
+```
+
+then 
 
