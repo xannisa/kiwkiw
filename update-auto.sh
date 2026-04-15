@@ -6,6 +6,7 @@ update() {
     # Easiest way is to rename base repo file so it will not detect to yum
 
     mv /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo.backup
+    
     # Enable all vault repo
     sed -i s/enabled=0/enabled=1/g /etc/yum.repos.d/CentOS-Vault.repo
 

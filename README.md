@@ -66,11 +66,66 @@ xvdb                       202:16   0  20G  0 disk
 ```
 means it use disk pratitioning and unmounting for disk `xvdb`.
 
-*This needs lvm2 package to install*
+*This needs lvm2 package to install*.
 Use this command to install :
 ``` bash
+yum install epel-release -y
 yum install lvm2 -y
 ```
 
-then 
+then check it `fdisk -l` then you can see like this:
+```bash
+Disk /dev/xvdb: 21.5 GB, 21474836480 bytes, 41943040 sectors
+Units = sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+```
+
+without disk identifier, it means `/dev/xvdb` is raw disk and needs to format first. Follow the steps in "format-disk.pdf" file. The important thing for this step is create the disk as Linux LVM system as below example.
+```bash
+    Device Boot      Start         End      Blocks   Id  System
+/dev/xvdb1            2048    41943039    20970496   8e  Linux LVM
+```
+
+then, we are ready to create virtual group by use this command :
+```bash
+    DISK="/dev/xvdb"
+    VG_NAME="gdplabs"
+    LV_NAME="se-prac-test"
+
+    pvcreate $DISK
+    vgcreate $VG_NAME $DISK
+    lvcreate -l 100%FREE -n $LV_NAME $VG_NAME # logical volume use all hard drive
+    mkfs.ext4 /dev/$VG_NAME/$LV_NAME 
+```
+
+Ext4 filesystem type is used for small files usage, and it can shrink if we set up too much space. Then mount it to `/app/se-prac-test` folder. Dont forget to create folder first.
+
+``` bash
+    MOUNT_POINT="/app/se-prac-test"
+    mkdir -p $MOUNT_POINT
+    mount /dev/$VG_NAME/$LV_NAME $MOUNT_POINT
+    echo "/dev/$VG_NAME/$LV_NAME $MOUNT_POINT ext4 defaults 0 0" >> /etc/fstab
+```
+
+To make auto mount when the system reboot. Write it on `/etc/fstab` file. To check the logical volume use thic command :
+
+```bash
+lsblk
+```
+
+will produce like this:
+```bash
+NAME                  MAJ:MIN RM SIZE RO TYPE MOUNTPOINT
+xvda                  202:0    0  20G  0 disk 
+└─xvda1               202:1    0  20G  0 part /
+xvdb                  202:16   0  20G  0 disk 
+└─xvdb1               202:17   0  20G  0 part 
+  └─gdplabs-se--prac--test
+                      253:0    0  20G  0 lvm  /app/se-prac-test
+```
+
+
+
+
 
