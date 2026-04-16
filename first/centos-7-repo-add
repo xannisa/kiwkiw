@@ -1,4 +1,4 @@
- #c7
+#c7
 [C7-vault-base]
 name=CentOS-7 - Base (Vault)
 baseurl=https://vault.centos.org/centos/7/os/\$basearch/
@@ -26,4 +26,10 @@ baseurl=https://vault.centos.org/centos/7/centosplus/\$basearch/
 gpgcheck=1
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
 enabled=1
-EOF
+
+[C7-vault-sclo]
+name=CentOS-7 - SCLO (Vault)
+baseurl=https://vault.centos.org/centos/7/sclo/\$basearch/rh/
+gpgcheck=0
+#gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
+enabled=1

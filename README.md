@@ -334,3 +334,146 @@ server {
 
 
 }
+
+....
+
+long short story, it fails, so I set the `/app/se-prac-test/sepractest/moodle` owned by sepractest but in nginx group.
+```bash
+sudo usermod -a -G nginx sepractest
+```
+
+## 5. Create backup
+
+In VM1, do
+```bash
+mariadb -u root -p 
+GRANT ALL PRIVILEGES ON moodle.* TO 'sepractest'@'VM02_IP_ADDRESS' IDENTIFIED BY 'your_password';
+FLUSH PRIVILEGES;
+```
+
+because no access at all from VM2 to VM1 and vice versa then, only can create the script which can say, there is connection from VM2 to VM1.
+
+
+## 7. Set up monitoring using Icinga 2 on VM02
+
+the username and password for icinga is :
+`admin & adminicinga`
+
+Use this documentation to set up icinga2
+https://icinga.com/blog/icinga-2-icinga-web-2-and-director-kickstart-on-centos-7/
+
+```bash
+yum install -y https://packages.icinga.com/epel/icinga-rpm-release-7-latest.noarch.rpm
+yum install -y epel-release
+yum install -y git curl make gcc wget nano vim net-tools tar unzip zip python-devel python-pip python-setuptools
+```
+
+and so on.. Please follow the steps until end.
+For this step `yum install -y centos-release-scl`
+
+I prefer use Vault repo for `sh-php73` by add 
+```bash 
+[C7-vault-sclo]
+name=CentOS-7 - SCLO (Vault)
+baseurl=https://vault.centos.org/centos/7/sclo/\$basearch/rh/
+gpgcheck=0
+#gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
+enabled=1
+```
+Because centOs 7 is deprecated so no official repo.
+
+To use https. create the cert using this command :
+```bash
+yum install -y epel-release
+yum install -y certbot python2-certbot-apache
+
+```
+
+it blocked by selinux so apply this command to allow httpd connect to network
+```bash
+setsebool -P httpd_can_network_connect 1
+```
+
+to force to https, install the package `yum install -y certbot python2-certbot-apache` and edit file `/etc/httpd/conf.d/icinga.conf`
+with :
+```bash
+<VirtualHost *:80>
+    ServerName <domain>
+
+    DocumentRoot "/usr/share/icingaweb2/public"
+
+    <Directory "/usr/share/icingaweb2/public">
+        Options SymLinksIfOwnerMatch
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    ErrorLog /var/log/httpd/icinga_error.log
+    CustomLog /var/log/httpd/icinga_access.log combined
+</VirtualHost>
+```
+then restart httpd
+
+then, execute this `certbot --apache -d <domain>`
+agree what's necessary only!
+
+Then check on website.
+
+To check the item monitoring. Needs to install icinga2 on VM01 for the agent.
+
+install icinga2, then start and enable it.
+then execute `icinga2 node wizard` on both server. Specify VM02 as master and VM01 as agent.
+
+This is the configuration on VM01.
+```bash
+Please specify if this is an agent/satellite setup ('n' installs a master setup) [Y/n]: y
+
+Starting the Agent/Satellite setup routine...
+
+Please specify the common name (CN) [ip-172-30-2-18.us-west-2.compute.internal]: vm01
+
+Please specify the parent endpoint(s) (master or satellite) where this node should connect to:
+Master/Satellite Common Name (CN from your master/satellite node): vm02
+
+Do you want to establish a connection to the parent node from this node? [Y/n]: y
+Please specify the master/satellite connection information:
+Master/Satellite endpoint host (IP address or FQDN): 184.34.134.89
+Master/Satellite endpoint port [5665]: 
+
+Add more master/satellite endpoints? [y/N]: n
+```
+
+and this is the configuration from VM02 :
+```bash
+Please specify the common name (CN) [ip-172-30-2-221.us-west-2.compute.internal]: vm02
+Reconfiguring Icinga...
+Checking for existing certificates for common name 'vm02'...
+Certificates not yet generated. Running 'api setup' now.
+Generating master configuration for Icinga 2.
+'api' feature already enabled.
+
+Master zone name [master]: 
+
+Default global zones: global-templates director-global
+Do you want to specify additional global zones? [y/N]: y
+
+Please specify the name of the global Zone: masterzone
+
+Do you want to specify another global zone? [y/N]: n
+Please specify the API bind host/port (optional):
+Bind Host []: 
+Bind Port []: 
+
+Do you want to disable the inclusion of the conf.d directory [Y/n]: n
+
+Done.
+
+Now restart your Icinga 2 daemon to finish the installation!
+```
+
+**Current status**
+Monitoring backend 'icinga' is not running. on icingaweb because I accidentally delete the ca-cert in master vm. after i can run `icinga2 node wizard` and configure to run the service, the issue keep persist. I guess the issue come from connection to ido_mysql db. 
+1. Already check the connection to the db `mysql -u icinga -p icinga -e "SHOW TABLES;"` : OK
+2. COnfiguration file in `/etc/icinga2/features-enabled/ido-mysql.conf` : SAME CREDENTIALS
+
+...no time to continue debugging.
