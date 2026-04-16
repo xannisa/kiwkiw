@@ -342,6 +342,10 @@ long short story, it fails, so I set the `/app/se-prac-test/sepractest/moodle` o
 ```bash
 sudo usermod -a -G nginx sepractest
 ```
+I want to set all files to owned by sepractest. and I reinstall moodle in `/app/se-prac-test/sepractest/moodle2/moodle` with the same existing config. But the result still no-css for the website.
+
+The redis is not configured bcs the website is broken.
+
 
 ## 5. Create backup
 
