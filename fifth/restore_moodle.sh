@@ -1,8 +1,12 @@
 #!/bin/bash
 
-BACKUP_DIR="/app/se-prac-test/sepractest/db-backups"
-PASS="SecretPass123"
+# --- Configuration ---
+REMOTE_IP="35.162.215.25"
+KEY_PATH="privatekey.key" 
 DB_NAME="moodle"
+DB_USER="sepractest"
+BACKUP_DIR="/app/se-prac-test/sepractest/db-backups"
+PASS="test"
 
 usage() {
     echo "Usage: $0 [options]"
@@ -16,20 +20,31 @@ list_backups() {
     ls -1t "$BACKUP_DIR"/*.enc 2>/dev/null
 }
 
-restore_latest() {
-    LATEST=$(ls -1t "$BACKUP_DIR"/*.enc 2>/dev/null | head -n 1)
+perform_restore() {
+    local backup_file=$1
     
-    if [ -z "$LATEST" ]; then
-        echo "Error: No backup files found in $BACKUP_DIR"
+    if [ -z "$backup_file" ]; then
+        echo "Error: No backup file specified."
         exit 1
     fi
 
-    echo "Restoring from: $LATEST"
-    openssl enc -d -aes-256-cbc -pbkdf2 -pass "pass:$PASS" -in "$LATEST" | mysql "$DB_NAME"
-    echo "Restore completed successfully."
+    echo "Establishing secure tunnel to $REMOTE_IP..."
+    # Open tunnel on port 3307
+    ssh -i "$KEY_PATH" -L 3307:127.0.0.1:3306 sepractest@"$REMOTE_IP" -N -f -o StrictHostKeyChecking=no -o ExitOnForwardFailure=yes
+    sleep 5
+
+    echo "Decrypting and restoring from: $backup_file"
+    # Note: Removed -pbkdf2 for compatibility based on your previous error
+    openssl enc -d -aes-256-cbc -pass "pass:$PASS" -in "$backup_file" | \
+    mariadb -h 127.0.0.1 -P 3307 --user="$DB_USER" "$DB_NAME"
+
+    # Close tunnel
+    pkill -f "ssh -i $KEY_PATH -L 3307:127.0.0.1:3306"
+    
+    echo "Restore process completed."
 }
 
-# Parse options
+# --- Argument Parsing ---
 while getopts "hl" opt; do
   case $opt in
     h) usage; exit 0 ;;
@@ -38,7 +53,12 @@ while getopts "hl" opt; do
   esac
 done
 
-# If no arguments are passed, restore the latest
+# Default: Restore latest
 if [ $# -eq 0 ]; then
-    restore_latest
+    LATEST=$(ls -1t "$BACKUP_DIR"/*.enc 2>/dev/null | head -n 1)
+    if [ -z "$LATEST" ]; then
+        echo "Error: No backup files found."
+        exit 1
+    fi
+    perform_restore "$LATEST"
 fi

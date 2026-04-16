@@ -338,21 +338,46 @@ server {
 ....
 
 long short story, it fails, so I set the `/app/se-prac-test/sepractest/moodle` owned by sepractest but in nginx group.
+
 ```bash
 sudo usermod -a -G nginx sepractest
 ```
 
 ## 5. Create backup
 
-In VM1, do
+### Backup-DB files
+
+because no access at all from VM2 to VM1 and vice versa then except port 22 (I guess its blocking by external firewall, maybe cloud firewall, security group). So, the idea is used ssh tunnel.
+
+the command in the script `ssh -i "$KEY_PATH" -L 3307:127.0.0.1:3306 sepractest@"$REMOTE_IP" -N -f -o StrictHostKeyChecking=no` is for local forwarding, it means Maps port 3307 on VM02 to port 3306 (MariaDB) on the Remote VM (VM1). The 127.0.0.1 refers to the remote machine's own internal address.
+
+Then `mariadb-dump` is performed to backup the DB. Use openssl is for encyption db-backup.
+
+After backup complete, then kill the ssh tunnel by `pkill -f "ssh -i $KEY_PATH -L 3307:localhost:3306"`
+
+## Restore DB
+
+This script wis written using function to easiest way to determine the requirements. It needs -l and -h options. It requires passing an argument as well.
+
+This restore db use ssh tunnel. then restore the DB using default the latest file backup. After that, will kill the ssh tunnel.
+
+## Crontab to run as sepractest user
+
+This command execute crobtab will execute the `backup_moodle.sh` file with `sepractest` user. It needs to set in crontab config file.
+
 ```bash
-mariadb -u root -p 
-GRANT ALL PRIVILEGES ON moodle.* TO 'sepractest'@'VM02_IP_ADDRESS' IDENTIFIED BY 'your_password';
-FLUSH PRIVILEGES;
+0 4 * * * sepractest /bin/bash /app/se-prac-test/sepractest/backup_moodle.sh
 ```
 
-because no access at all from VM2 to VM1 and vice versa then, only can create the script which can say, there is connection from VM2 to VM1.
+**Attention**
 
+The script still failed because the mariadb-dump. It produce this error `mariadb-dump: Got error: 1045: "Access denied for user 'root'@'localhost' (using password: NO)" when trying to connect`, somehow it happen because the credential for db or grant permission on db still wrong.
+
+The `private.key` is located on `/app/se-prac-test/sepractest` and set to `600` permission. So the user sepractest can run. `db-backups` folder is also set to owned by this user.
+
+The password in file `backup_moodle.sh` and `restore_moodle.sh` is still in plan text :D
+
+*all the .sh files should be running with error, hehe*
 
 ## 7. Set up monitoring using Icinga 2 on VM02
 
@@ -475,5 +500,7 @@ Now restart your Icinga 2 daemon to finish the installation!
 Monitoring backend 'icinga' is not running. on icingaweb because I accidentally delete the ca-cert in master vm. after i can run `icinga2 node wizard` and configure to run the service, the issue keep persist. I guess the issue come from connection to ido_mysql db. 
 1. Already check the connection to the db `mysql -u icinga -p icinga -e "SHOW TABLES;"` : OK
 2. COnfiguration file in `/etc/icinga2/features-enabled/ido-mysql.conf` : SAME CREDENTIALS
+
+Then, the connetion from VM01 (host) is failed bcs the master is not listen on 5565 port. I guess the cause is installation setup is not preperly. or blocking by external firewall (cloud maybe).
 
 ...no time to continue debugging.
